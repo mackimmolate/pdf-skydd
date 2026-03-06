@@ -1,30 +1,35 @@
 # PDF-skydd
 
-Ett lokalt webbverktyg för att lägga till ett öppningslösenord på PDF-filer direkt i webbläsaren.
+Ett lokalt webbverktyg för att lägga till ett öppningslösenord på PDF-filer
+direkt i webbläsaren.
 
 ## Syfte
 
-Appen har ett enda huvudmål: lösenordsskydda en PDF så att den kräver lösenord för att öppnas.
+Appen har ett enda huvudmål: att lösenordsskydda en PDF så att den kräver
+lösenord för att öppnas.
 
-Den försöker inte använda PDF-behörigheter som ett säkerhetslager efter att filen har öppnats. När en användare väl har öppnat dokumentet ska läsning, utskrift, kopiering och formulärfyllning fungera normalt.
+Den försöker inte använda PDF-behörigheter som ett säkerhetslager efter att
+filen har öppnats. När en användare väl har öppnat dokumentet ska läsning,
+utskrift, kopiering och formulärfyllning fungera normalt.
 
 ## Säkerhetsmodell
 
 - Behandlingen sker lokalt i webbläsaren.
 - Filen laddas inte upp av appen.
 - Ett användarlösenord sätts för att öppna PDF-filen.
-- Ett separat slumpat ägarlösenord skapas internt för att undvika trivial kringgång av PDF-metadata.
+- Ett separat slumpat ägarlösenord skapas internt för att undvika trivial
+  kringgång av PDF-metadata.
 - Appen försöker inte erbjuda återställning av glömda lösenord.
 
 ## Begränsningar
 
 - Endast en PDF åt gången.
 - Max filstorlek: 25 MB.
-- Endast o-krypterade PDF-filer stöds som indata.
+- Endast okrypterade PDF-filer stöds som indata.
 - Lösenord måste vara 1-32 tecken långa.
 - Lösenord måste kunna uttryckas med Latin-1-tecken.
-  Exempel: `A-Ö`, `a-ö`, siffror och vanliga symboler fungerar.
-  Exempel: emoji stöds inte.
+- Exempel: `A-Ö`, `a-ö`, siffror och vanliga symboler fungerar.
+- Exempel: emoji stöds inte.
 - Trasiga eller ogiltiga PDF-filer avvisas.
 
 ## Användning
@@ -42,13 +47,17 @@ Utdatafilen får suffixet `_locked.pdf`.
 - `react-dropzone` för filval
 - `pdf-lib-plus-encrypt` för PDF-kryptering
 
-Krypteringsbiblioteket laddas först när skyddet faktiskt körs. Det håller den initiala appstarten mindre och minskar mängden kod som behövs innan användaren har valt en fil.
+Krypteringsbiblioteket laddas först när skyddet faktiskt körs. Det håller den
+initiala appstarten mindre och minskar mängden kod som behövs innan användaren
+har valt en fil.
 
 ## Kompatibilitet
 
-Version `0.1.1` förbättrar kompatibiliteten med Adobe Acrobat Reader genom att spara låsta PDF-filer i en mer konservativ struktur.
+Version `0.1.1` förbättrar kompatibiliteten med Adobe Acrobat Reader genom att
+spara låsta PDF-filer i en mer konservativ struktur.
 
-Om du har skapat låsta PDF-filer med en äldre version av appen och Acrobat vill reparera dem bör de genereras om med den aktuella versionen.
+Om du har skapat låsta PDF-filer med en äldre version av appen och Acrobat vill
+reparera dem bör de genereras om med den aktuella versionen.
 
 ## Kvalitet och verifiering
 
@@ -79,13 +88,43 @@ npm run dev
 
 ## Deploy
 
-GitHub Actions bygger projektet och publicerar `pdf-skydd/dist` till GitHub Pages via den officiella Pages-deploykedjan.
+GitHub Actions bygger projektet och publicerar `pdf-skydd/dist` till GitHub
+Pages via den officiella Pages-deploykedjan.
 
-I repository-inställningarna för Pages ska källan vara satt till `GitHub Actions`.
+I repository-inställningarna för Pages ska källan vara satt till
+`GitHub Actions`.
 
 Att pusha `main` räcker för att skeppa appen.
 
-Git-taggar och GitHub Releases är valfria och behövs bara om du vill ha formell release-spårning.
+Git-taggar och GitHub Releases är valfria och behövs bara om du vill ha formell
+release-spårning.
+
+## Underhåll och support
+
+Projektet är medvetet feature-frozen runt ett enda arbetsflöde: att lägga till
+ett öppningslösenord på en PDF lokalt i webbläsaren.
+
+Fortsatt underhåll är inriktat på felrättningar, kompatibilitetsfixar,
+beroendeuppdateringar och säkerhetsfixar.
+
+## Webbläsarstöd
+
+Primärt stöd ges för aktuella stabila desktopversioner av Chrome, Edge,
+Firefox och Safari.
+
+Nyare mobilwebbläsare på iOS och Android är best-effort, men desktop är
+huvudmålet.
+
+## Säkerhetsrapportering
+
+Rutinen för säkerhetsrapportering finns i [`../SECURITY.md`](../SECURITY.md).
+
+Öppna inte publika issues för säkerhetskänsliga problem.
+
+## Licens
+
+Repositoryt är uttryckligen [`UNLICENSED`](../LICENSE). Återanvändning,
+ändring och distribution kräver förhandsmedgivande.
 
 ## Versionering
 

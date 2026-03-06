@@ -41,6 +41,26 @@ Pushing `main` is enough to ship the app through GitHub Actions.
 
 Git tags and GitHub Releases are optional and are only needed if you want formal release bookkeeping.
 
+### Maintenance
+
+The project is intentionally feature-frozen around one use case: adding an open password to a PDF locally in the browser.
+
+Maintenance is focused on bug fixes, browser compatibility, dependency hygiene, and security fixes.
+
+### Browser Support
+
+The supported target is current stable desktop versions of Chrome, Edge, Firefox, and Safari.
+
+Recent mobile browsers on iOS and Android are best-effort, but desktop remains the primary support target.
+
+### Security
+
+Security reporting guidance is documented in [SECURITY.md](SECURITY.md).
+
+### License
+
+The repository is explicitly [UNLICENSED](LICENSE). Reuse, modification, and redistribution require prior written permission.
+
 ### Versioning
 
 - [VERSIONING.md](VERSIONING.md)
