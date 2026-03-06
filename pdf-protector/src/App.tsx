@@ -1,10 +1,49 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
-import { protectPdf } from './utils/pdf';
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILE_SIZE_MB,
+  getPasswordValidationMessage,
+  getProtectPdfErrorMessage,
+  protectPdf,
+} from './utils/pdf';
 import './App.css';
 
-const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
-const MAX_FILE_SIZE_MB = 25;
+function getRejectedFileMessage(fileRejections: FileRejection[]): string {
+  if (fileRejections.length === 0) {
+    return 'Kunde inte läsa filen. Försök igen.';
+  }
+
+  const [{ errors }] = fileRejections;
+  const sizeError = errors.find((rejection) => rejection.code === 'file-too-large');
+  const typeError = errors.find((rejection) => rejection.code === 'file-invalid-type');
+  const countError = errors.find((rejection) => rejection.code === 'too-many-files');
+
+  if (sizeError) {
+    return `Filen är för stor. Max ${MAX_FILE_SIZE_MB} MB.`;
+  }
+
+  if (typeError) {
+    return 'Endast PDF-filer stöds.';
+  }
+
+  if (countError) {
+    return 'Välj bara en PDF-fil åt gången.';
+  }
+
+  return 'Kunde inte läsa filen. Försök igen.';
+}
+
+function getDownloadFileName(fileName: string): string {
+  const originalName = fileName.replace(/\.pdf$/i, '');
+  return `${originalName}_locked.pdf`;
+}
+
+function toBlobBytes(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy;
+}
 
 function App() {
   const [file, setFile] = useState<File | null>(null);
@@ -12,6 +51,9 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [protectedPdfUrl, setProtectedPdfUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasTriedProtect, setHasTriedProtect] = useState(false);
+
+  const activeRequestIdRef = useRef(0);
 
   const revokeProtectedUrl = useCallback(() => {
     if (protectedPdfUrl) {
@@ -19,44 +61,39 @@ function App() {
     }
   }, [protectedPdfUrl]);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setError(null);
-    setPassword('');
+  const clearProtectedResult = useCallback(() => {
     revokeProtectedUrl();
     setProtectedPdfUrl(null);
-
-    if (acceptedFiles.length > 0) {
-      setFile(acceptedFiles[0]);
-    }
   }, [revokeProtectedUrl]);
+
+  const cancelActiveRequest = useCallback(() => {
+    activeRequestIdRef.current += 1;
+    setIsProcessing(false);
+  }, []);
+
+  const clearForNewAttempt = useCallback(() => {
+    cancelActiveRequest();
+    setPassword('');
+    setHasTriedProtect(false);
+    setError(null);
+    clearProtectedResult();
+  }, [cancelActiveRequest, clearProtectedResult]);
+
+  const handleReset = useCallback(() => {
+    clearForNewAttempt();
+    setFile(null);
+  }, [clearForNewAttempt]);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    clearForNewAttempt();
+    setFile(acceptedFiles[0] ?? null);
+  }, [clearForNewAttempt]);
 
   const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
-    revokeProtectedUrl();
-    setProtectedPdfUrl(null);
+    clearForNewAttempt();
     setFile(null);
-    setPassword('');
-
-    if (fileRejections.length === 0) {
-      setError('Kunde inte läsa filen. Försök igen.');
-      return;
-    }
-
-    const [{ errors }] = fileRejections;
-    const sizeError = errors.find((rejection) => rejection.code === 'file-too-large');
-    const typeError = errors.find((rejection) => rejection.code === 'file-invalid-type');
-
-    if (sizeError) {
-      setError(`Filen är för stor. Max ${MAX_FILE_SIZE_MB} MB.`);
-      return;
-    }
-
-    if (typeError) {
-      setError('Endast PDF-filer stöds.');
-      return;
-    }
-
-    setError('Kunde inte läsa filen. Försök igen.');
-  }, [revokeProtectedUrl]);
+    setError(getRejectedFileMessage(fileRejections));
+  }, [clearForNewAttempt]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -71,88 +108,122 @@ function App() {
 
   useEffect(() => {
     return () => {
+      activeRequestIdRef.current += 1;
+
       if (protectedPdfUrl) {
         URL.revokeObjectURL(protectedPdfUrl);
       }
     };
   }, [protectedPdfUrl]);
 
+  const passwordError = getPasswordValidationMessage(password, {
+    required: hasTriedProtect,
+  });
+  const blockingPasswordError = getPasswordValidationMessage(password, { required: true });
+  const canProtect = Boolean(file) && !isProcessing && !blockingPasswordError;
+
+  const handlePasswordChange = (nextPassword: string) => {
+    setPassword(nextPassword);
+    setError(null);
+  };
+
   const handleProtect = async () => {
-    if (!file || !password) return;
+    setHasTriedProtect(true);
+
+    if (!file || blockingPasswordError) {
+      return;
+    }
+
+    const requestId = activeRequestIdRef.current + 1;
+    activeRequestIdRef.current = requestId;
 
     setIsProcessing(true);
     setError(null);
+    clearProtectedResult();
 
     try {
       const protectedBytes = await protectPdf(file, password);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const blob = new Blob([protectedBytes as any], { type: 'application/pdf' });
-      if (protectedPdfUrl) {
-        URL.revokeObjectURL(protectedPdfUrl);
+
+      if (activeRequestIdRef.current !== requestId) {
+        return;
       }
+
+      const blob = new Blob([toBlobBytes(protectedBytes)], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       setProtectedPdfUrl(url);
-    } catch (err) {
-      console.error(err);
-      setError('Misslyckades med att skydda PDF. Försök igen.');
+    } catch (caughtError) {
+      if (activeRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      console.error(caughtError);
+      setError(getProtectPdfErrorMessage(caughtError));
     } finally {
-      setIsProcessing(false);
+      if (activeRequestIdRef.current === requestId) {
+        setIsProcessing(false);
+      }
     }
+  };
+
+  const handleProtectClick = () => {
+    void handleProtect();
   };
 
   const handleDownload = () => {
-    if (protectedPdfUrl && file) {
-      const link = document.createElement('a');
-      link.href = protectedPdfUrl;
-      const originalName = file.name.replace(/\.pdf$/i, '');
-      link.download = `${originalName}_locked.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    if (!protectedPdfUrl || !file) {
+      return;
     }
-  };
 
-  const handleReset = () => {
-    setFile(null);
-    setPassword('');
-    revokeProtectedUrl();
-    setProtectedPdfUrl(null);
-    setError(null);
+    const link = document.createElement('a');
+    link.href = protectedPdfUrl;
+    link.download = getDownloadFileName(file.name);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
     <div className="container">
-      <h1>PDF-skydd</h1>
-      <p>Säkra dina PDF-filer med valfritt lösenord.</p>
+      <div className="hero">
+        <p className="eyebrow">Lokal PDF-säkring</p>
+        <h1>PDF-skydd</h1>
+        <p className="lead">Lägg till ett öppningslösenord direkt i webbläsaren. Filen lämnar aldrig din enhet.</p>
+      </div>
 
       <div className="card">
         {!file ? (
-          <div {...getRootProps()} className={`dropzone ${isDragActive ? 'active' : ''}`}>
+          <div
+            {...getRootProps()}
+            className={`dropzone ${isDragActive ? 'active' : ''}`}
+            aria-describedby="dropzone-help"
+          >
             <input {...getInputProps()} />
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <polyline points="14 2 14 8 20 8"></polyline>
               <line x1="12" y1="18" x2="12" y2="12"></line>
               <line x1="9" y1="15" x2="15" y2="15"></line>
             </svg>
             <p>{isDragActive ? 'Släpp PDF-filen här...' : 'Dra och släpp en PDF-fil här, eller klicka för att välja'}</p>
-            <p className="hint">Max {MAX_FILE_SIZE_MB} MB.</p>
-            {error && <p className="error-msg">{error}</p>}
+            <p id="dropzone-help" className="hint">Max {MAX_FILE_SIZE_MB} MB. Endast en fil åt gången.</p>
+            {error && <p className="error-msg" role="alert">{error}</p>}
           </div>
         ) : (
-          <div className="file-preview">
+          <div className="file-preview" aria-busy={isProcessing}>
             <div className="file-icon">
               PDF
               {protectedPdfUrl && (
                 <div className="lock-badge">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                   </svg>
                 </div>
               )}
             </div>
+
             <p className="file-name">{file.name}</p>
+            <p className="hint">Utdatafilen laddas ner som {getDownloadFileName(file.name)}</p>
 
             {!protectedPdfUrl ? (
               <>
@@ -162,34 +233,67 @@ function App() {
                     id="password"
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(event) => handlePasswordChange(event.target.value)}
                     placeholder="Skriv in lösenord..."
+                    autoComplete="new-password"
+                    spellCheck={false}
+                    aria-invalid={Boolean(passwordError)}
+                    aria-describedby="password-help password-error"
+                    disabled={isProcessing}
                   />
+                  <p id="password-help" className="hint">
+                    1-32 tecken. Latin-1 stöds, till exempel A-Ö, a-ö, siffror och vanliga symboler.
+                  </p>
+                  {passwordError && (
+                    <p id="password-error" className="error-msg" role="alert">
+                      {passwordError}
+                    </p>
+                  )}
                 </div>
 
-                {error && <p className="error-msg">{error}</p>}
+                {error && <p className="error-msg" role="alert">{error}</p>}
 
                 <div className="actions">
-                  <button className="btn-reset" onClick={handleReset}>Avbryt</button>
+                  <button className="btn-reset" type="button" onClick={handleReset}>
+                    Avbryt
+                  </button>
                   <button
                     className="btn-primary"
-                    onClick={handleProtect}
-                    disabled={!password || isProcessing}
+                    type="button"
+                    onClick={handleProtectClick}
+                    disabled={!canProtect}
                   >
                     {isProcessing ? 'Skyddar...' : 'Skydda PDF'}
                   </button>
                 </div>
               </>
             ) : (
-              <div className="actions">
-                <button className="btn-reset" onClick={handleReset}>Börja om</button>
-                <button className="btn-primary" onClick={handleDownload}>
-                  Ladda ner låst PDF
-                </button>
-              </div>
+              <>
+                <p className="success-msg" role="status">
+                  PDF-filen är skyddad lokalt och redo att laddas ner.
+                </p>
+
+                <div className="actions">
+                  <button className="btn-reset" type="button" onClick={handleReset}>
+                    Börja om
+                  </button>
+                  <button className="btn-primary" type="button" onClick={handleDownload}>
+                    Ladda ner låst PDF
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )}
+      </div>
+
+      <div className="card note-card">
+        <h2>Viktigt att veta</h2>
+        <ul className="note-list">
+          <li>Appen lägger bara till ett öppningslösenord. Den försöker inte begränsa vad som är tillåtet efter att filen har öppnats.</li>
+          <li>Glömmer du lösenordet finns ingen återställning i appen.</li>
+          <li>Redan krypterade eller trasiga PDF-filer måste hanteras utanför appen.</li>
+        </ul>
       </div>
     </div>
   );
