@@ -77,6 +77,10 @@ GitHub Actions bygger projektet och publicerar `pdf-skydd/dist` till GitHub Page
 
 I repository-inställningarna för Pages ska källan vara satt till `GitHub Actions`.
 
+Att pusha `main` räcker för att skeppa appen.
+
+Git-taggar och GitHub Releases är valfria och behövs bara om du vill ha formell release-spårning.
+
 ## Versionering
 
 Versionspolicyn finns i [`../VERSIONING.md`](../VERSIONING.md).

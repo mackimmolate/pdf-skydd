@@ -9,7 +9,11 @@ This changelog follows the spirit of Keep a Changelog, with one important caveat
 
 ## [0.1.0] - 2026-03-06
 
-First formally documented release.
+First documented ship-ready release baseline.
+
+This version is fully represented in repository files and can be shipped by pushing `main`.
+
+Creating a matching git tag or GitHub Release is recommended, but optional.
 
 ### Added
 

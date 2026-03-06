@@ -35,6 +35,12 @@ npm test
 npm run build
 ```
 
+### Shipping
+
+Pushing `main` is enough to ship the app through GitHub Actions.
+
+Git tags and GitHub Releases are optional and are only needed if you want formal release bookkeeping.
+
 ### Versioning
 
 - [VERSIONING.md](VERSIONING.md)
