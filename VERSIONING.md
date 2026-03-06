@@ -2,11 +2,11 @@
 
 This repository now uses Semantic Versioning.
 
-Current documented version: `0.1.0`
+Current documented version: `0.1.1`
 
 ## Status
 
-`0.1.0` is the first authoritative documented release baseline of the project.
+`0.1.1` is the current authoritative documented release baseline of the project.
 
 The project can be shipped from the repository files alone by pushing `main`.
 
@@ -80,6 +80,7 @@ These versions are documented retroactively from local repository history:
 - `0.0.3` on `2026-01-21`: encryption and icon upgrade milestone, based on commit `b27577dd`
 - `0.0.4` on `2026-02-03`: refactor milestone, based on commit `c073ff69`
 - `0.1.0` on `2026-03-06`: first formally documented release baseline, based on commits `8976eeb5`, `c5f001ac`, and the follow-up versioning docs
+- `0.1.1` on `2026-03-06`: Acrobat Reader compatibility patch for generated locked PDFs
 
 ## Historical note
 

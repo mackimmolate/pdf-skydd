@@ -7,6 +7,18 @@ This changelog follows the spirit of Keep a Changelog, with one important caveat
 - entries before `0.1.0` are reconstructed from local repository history
 - those reconstructed entries are best-effort historical milestones, not guaranteed published releases
 
+## [0.1.1] - 2026-03-06
+
+Patch release for Acrobat Reader compatibility.
+
+### Fixed
+
+- saved encrypted PDFs using classic xref tables instead of object streams to avoid Acrobat repair prompts on generated locked files
+
+### Notes
+
+- locked PDFs created with older app builds should be regenerated with `0.1.1`
+
 ## [0.1.0] - 2026-03-06
 
 First documented ship-ready release baseline.

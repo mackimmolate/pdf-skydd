@@ -47,8 +47,11 @@ describe('protectPdf', () => {
   it('adds an open password to a valid PDF', async () => {
     const file = await createPdfFile();
     const protectedBytes = await protectPdf(file, 'lösenord');
+    const text = Buffer.from(protectedBytes).toString('latin1');
 
-    expect(Buffer.from(protectedBytes).toString('latin1')).toContain('/Encrypt');
+    expect(text).toContain('/Encrypt');
+    expect(text).not.toContain('/ObjStm');
+    expect(text).toContain('\nxref\n');
     await expect(PDFDocument.load(protectedBytes)).rejects.toThrow(/encrypted/i);
   });
 

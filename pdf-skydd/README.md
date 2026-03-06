@@ -44,6 +44,12 @@ Utdatafilen får suffixet `_locked.pdf`.
 
 Krypteringsbiblioteket laddas först när skyddet faktiskt körs. Det håller den initiala appstarten mindre och minskar mängden kod som behövs innan användaren har valt en fil.
 
+## Kompatibilitet
+
+Version `0.1.1` förbättrar kompatibiliteten med Adobe Acrobat Reader genom att spara låsta PDF-filer i en mer konservativ struktur.
+
+Om du har skapat låsta PDF-filer med en äldre version av appen och Acrobat vill reparera dem bör de genereras om med den aktuella versionen.
+
 ## Kvalitet och verifiering
 
 Projektet innehåller automatiserade tester för:

@@ -5,6 +5,9 @@ export const MAX_PASSWORD_LENGTH = 32;
 const PDF_MAJOR_VERSION = 1;
 const PDF_MINOR_VERSION = 7;
 const MAX_PASSWORD_CODE_POINT = 0xff;
+const ACROBAT_SAFE_SAVE_OPTIONS = {
+  useObjectStreams: false,
+} as const;
 
 const OPEN_PASSWORD_PERMISSIONS = {
   printing: 'highResolution' as const,
@@ -163,7 +166,9 @@ export async function protectPdf(file: File, password: string): Promise<Uint8Arr
       permissions: OPEN_PASSWORD_PERMISSIONS,
     });
 
-    return await pdfDoc.save();
+    // Acrobat is stricter than browser viewers about encrypted PDFs that use object streams.
+    // Saving with classic xref tables avoids the repair prompt for generated files.
+    return await pdfDoc.save(ACROBAT_SAFE_SAVE_OPTIONS);
   } catch (error) {
     throw normalizeProtectPdfError(error);
   }
